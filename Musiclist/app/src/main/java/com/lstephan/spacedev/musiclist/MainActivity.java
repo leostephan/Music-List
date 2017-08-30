@@ -1,7 +1,7 @@
-package com.example.spacedev.musiclist;
+package com.lstephan.spacedev.musiclist;
+
 
 import android.content.SharedPreferences;
-import android.media.Image;
 import android.media.MediaPlayer;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
@@ -12,6 +12,7 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -22,7 +23,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.List;
 
-import static android.content.SharedPreferences.*;
+import static android.content.SharedPreferences.Editor;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -47,6 +48,8 @@ public class MainActivity extends AppCompatActivity {
         ImageButton stopButton = (ImageButton) findViewById(R.id.imageButton3);
         Button seekButton = (Button) findViewById(R.id.button3);
         length = 0;
+
+        final TextView info = (TextView) findViewById(R.id.textView2);
 
         mPrefs = PreferenceManager.getDefaultSharedPreferences(MainActivity.this.getApplicationContext());
 
@@ -73,6 +76,10 @@ public class MainActivity extends AppCompatActivity {
             final ArrayAdapter<String> adapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_list_item_1, displayer);
             mListView.setAdapter(adapter);
         }
+        else{
+            info.setText("To synchronize your musics into the app, press on the top right button! (it can take up to 3mins so don't panic!)");
+            info.setVisibility(View.VISIBLE);
+        }
 
         seekButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -80,24 +87,16 @@ public class MainActivity extends AppCompatActivity {
 
                 filesMP3 = getListMP3Files(new File("/storage"));
 
-                System.out.println("filesMP3 = getListMP3Files(new File(...)); PASSED");
                 //SAVE filesMP3 to SharedPreference
                 mPrefs = PreferenceManager.getDefaultSharedPreferences(MainActivity.this.getApplicationContext());
                 prefsEditor = mPrefs.edit();
 
-                System.out.println("prefsEditor = mPrefs.edit(); PASSED");
-
                 Gson gson = new Gson();
                 String jsonSongs = gson.toJson(filesMP3);
 
-                System.out.println(jsonSongs);
-                System.out.println("jsonSongs = gson.toJson(filesMP3); PASSED");
-
                 prefsEditor.putString("filesMP3", jsonSongs);
 
-                System.out.println("prefsEditor.putString(\"filesMP3\", jsonSongs); PASSED");
                 if(prefsEditor.commit()){
-                    System.out.println("commit succeed!");
                     prefsEditor.putBoolean("isAny", true);
                     prefsEditor.apply();
                 }
@@ -118,14 +117,15 @@ public class MainActivity extends AppCompatActivity {
                 final ArrayAdapter<String> adapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_list_item_1, displayer);
                 mListView.setAdapter(adapter);
 
+                info.setVisibility(View.INVISIBLE);
             }
         });
+//FROM HERE
 
+//TO COMPLETE
         mListView.setOnItemClickListener(new AdapterView.OnItemClickListener(){
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
-                System.out.println("You clicked on : " + filesMP3.get(i).getName());
-
                 stopPlaying();
                 isPlaying = false;
                 mediaPlayer = new MediaPlayer();
@@ -137,6 +137,7 @@ public class MainActivity extends AppCompatActivity {
                 }
                 mediaPlayer.start();
                 isPlaying = true;
+                pauseButton.setImageResource(R.mipmap.ic_pause_circle_outline_white_24dp);
                 pauseButton.setVisibility(View.VISIBLE);
             }
         });
@@ -164,7 +165,9 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View view) {
                 stopPlaying();
                 isPlaying = false;
+                pauseButton.setImageResource(R.mipmap.ic_pause_circle_outline_white_24dp);
                 pauseButton.setVisibility(View.INVISIBLE);
+
             }
         });
     }
@@ -173,8 +176,6 @@ public class MainActivity extends AppCompatActivity {
     public ListView getmListView() {
         return mListView;
     }
-
-
 
     private List<Song> getListMP3Files(File parentDir) {
         ArrayList<Song> inFiles = new ArrayList<>();
@@ -186,7 +187,6 @@ public class MainActivity extends AppCompatActivity {
                 if(file.getName().length() > 4) {
                     String extension = file.getName().substring(file.getName().length() - 4);
                     if (extension.compareTo(".mp3") == 0) {
-                        System.out.println(file.getAbsolutePath());
                         Song newSong = new Song(file.getPath(), file.getName());
                         inFiles.add(newSong);
                     }

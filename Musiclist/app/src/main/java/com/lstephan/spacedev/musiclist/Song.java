@@ -1,4 +1,4 @@
-package com.example.spacedev.musiclist;
+package com.lstephan.spacedev.musiclist;
 
 public class Song {
 

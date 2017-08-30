@@ -1,4 +1,4 @@
-package com.example.spacedev.musiclist;
+package com.lstephan.spacedev.musiclist;
 
 import android.content.Context;
 import android.support.test.InstrumentationRegistry;
@@ -21,6 +21,6 @@ public class ExampleInstrumentedTest {
         // Context of the app under test.
         Context appContext = InstrumentationRegistry.getTargetContext();
 
-        assertEquals("com.example.spacedev.musiclist", appContext.getPackageName());
+        assertEquals("com.lstephan.spacedev.musiclist", appContext.getPackageName());
     }
 }
