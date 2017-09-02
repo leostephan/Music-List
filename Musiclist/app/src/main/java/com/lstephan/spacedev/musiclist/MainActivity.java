@@ -2,9 +2,12 @@ package com.lstephan.spacedev.musiclist;
 
 
 import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.media.MediaPlayer;
+import android.net.Uri;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.AdapterView;
@@ -17,7 +20,6 @@ import android.widget.TextView;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
-import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -38,6 +40,8 @@ public class MainActivity extends AppCompatActivity {
     private MediaPlayer mediaPlayer;
     private boolean isPlaying;
 
+    private int lasti;
+
 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -53,12 +57,14 @@ public class MainActivity extends AppCompatActivity {
 
         mPrefs = PreferenceManager.getDefaultSharedPreferences(MainActivity.this.getApplicationContext());
 
+        mediaPlayer = new MediaPlayer();
         Boolean isAny = mPrefs.getBoolean("isAny", false);
-        System.out.println("isAny : "+isAny );
-        if(isAny){
+        System.out.println("isAny : " + isAny);
+        if (isAny) {
             Gson gson = new Gson();
             String jsonSongs = mPrefs.getString("filesMP3", "");
-            Type type = new TypeToken<List<Song>>(){}.getType();
+            Type type = new TypeToken<List<Song>>() {
+            }.getType();
             filesMP3 = gson.fromJson(jsonSongs, type);
 
             int listLength = 0;
@@ -68,15 +74,14 @@ public class MainActivity extends AppCompatActivity {
             displayer = new String[listLength];
 
             int ite = 0;
-            for (Song song : filesMP3){
-                displayer[ite] = song.getName();
+            for (Song song : filesMP3) {
+                displayer[ite] = song.getName() + " - " + milliSecondsToTimer(song.getDuration());
                 ite++;
             }
 
             final ArrayAdapter<String> adapter = new ArrayAdapter<>(MainActivity.this, android.R.layout.simple_list_item_1, displayer);
             mListView.setAdapter(adapter);
-        }
-        else{
+        } else {
             info.setText("To synchronize your musics into the app, press on the top right button! (it can take up to 3mins so don't panic!)");
             info.setVisibility(View.VISIBLE);
         }
@@ -85,7 +90,7 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View view) {
 
-                filesMP3 = getListMP3Files(new File("/storage"));
+                filesMP3 = getListMP3Files();
 
                 //SAVE filesMP3 to SharedPreference
                 mPrefs = PreferenceManager.getDefaultSharedPreferences(MainActivity.this.getApplicationContext());
@@ -96,7 +101,7 @@ public class MainActivity extends AppCompatActivity {
 
                 prefsEditor.putString("filesMP3", jsonSongs);
 
-                if(prefsEditor.commit()){
+                if (prefsEditor.commit()) {
                     prefsEditor.putBoolean("isAny", true);
                     prefsEditor.apply();
                 }
@@ -109,8 +114,8 @@ public class MainActivity extends AppCompatActivity {
                 displayer = new String[listLength];
 
                 int ite = 0;
-                for (Song song : filesMP3){
-                    displayer[ite] = song.getName();
+                for (Song song : filesMP3) {
+                    displayer[ite] = song.getName() + " - " + milliSecondsToTimer(song.getDuration());
                     ite++;
                 }
 
@@ -123,12 +128,13 @@ public class MainActivity extends AppCompatActivity {
 //FROM HERE
 
 //TO COMPLETE
-        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener(){
+        mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
                 stopPlaying();
                 isPlaying = false;
                 mediaPlayer = new MediaPlayer();
+
                 try {
                     mediaPlayer.setDataSource(filesMP3.get(i).getPath());
                     mediaPlayer.prepare();
@@ -139,19 +145,19 @@ public class MainActivity extends AppCompatActivity {
                 isPlaying = true;
                 pauseButton.setImageResource(R.mipmap.ic_pause_circle_outline_white_24dp);
                 pauseButton.setVisibility(View.VISIBLE);
+                lasti = i;
             }
         });
 
         pauseButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if(isPlaying){
+                if (isPlaying) {
                     mediaPlayer.pause();
                     length = mediaPlayer.getCurrentPosition();
                     isPlaying = false;
                     pauseButton.setImageResource(R.mipmap.ic_play_circle_outline_white_24dp);
-                }
-                else{
+                } else {
                     mediaPlayer.seekTo(length);
                     mediaPlayer.start();
                     isPlaying = true;
@@ -159,6 +165,24 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+        /*mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mediaPlayer) {
+                System.out.println("OnCompletion DONE");
+                mediaPlayer = new MediaPlayer();
+                try {
+                    mediaPlayer.setDataSource(filesMP3.get(lasti+1).getPath());
+                    mediaPlayer.prepare();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                mediaPlayer.start();
+                isPlaying = true;
+                pauseButton.setImageResource(R.mipmap.ic_pause_circle_outline_white_24dp);
+                pauseButton.setVisibility(View.VISIBLE);
+                lasti++;
+            }
+        });*/
 
         stopButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -173,25 +197,58 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    public ListView getmListView() {
-        return mListView;
+    public  String milliSecondsToTimer(long milliseconds) {
+        String finalTimerString = "";
+        String secondsString = "";
+
+        // Convert total duration into time
+        int hours = (int) (milliseconds / (1000 * 60 * 60));
+        int minutes = (int) (milliseconds % (1000 * 60 * 60)) / (1000 * 60);
+        int seconds = (int) ((milliseconds % (1000 * 60 * 60)) % (1000 * 60) / 1000);
+        // Add hours if there
+        if (hours > 0) {
+            finalTimerString = hours + ":";
+        }
+
+        // Prepending 0 to seconds if it is one digit
+        if (seconds < 10) {
+            secondsString = "0" + seconds;
+        } else {
+            secondsString = "" + seconds;
+        }
+
+        finalTimerString = finalTimerString + minutes + ":" + secondsString;
+
+        // return timer string
+        return finalTimerString;
     }
 
-    private List<Song> getListMP3Files(File parentDir) {
+    private List<Song> getListMP3Files(){
+        Uri allsongsuri = MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;
+        String selection = MediaStore.Audio.Media.IS_MUSIC + " != 0";
         ArrayList<Song> inFiles = new ArrayList<>();
-        File[] files = parentDir.listFiles();
-        for (File file : files) {
-            if (file.isDirectory()) {
-                inFiles.addAll(getListMP3Files(file));
-            } else {
-                if(file.getName().length() > 4) {
-                    String extension = file.getName().substring(file.getName().length() - 4);
-                    if (extension.compareTo(".mp3") == 0) {
-                        Song newSong = new Song(file.getPath(), file.getName());
-                        inFiles.add(newSong);
+        Cursor cursor = MainActivity.this.getContentResolver().query(allsongsuri, null, null, null, selection);
+        int pos = 0;
+        if (cursor != null) {
+            if (cursor.moveToFirst()) {
+                do {
+                    if(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME)).endsWith(".mp3")
+                            && (Integer.parseInt(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DURATION))) >= 1500)) {
+
+                        String song_name = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DISPLAY_NAME));
+                        String fullpath = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DATA));
+                        int duration = Integer.parseInt(cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.DURATION)));
+                        String artist = cursor.getString(cursor.getColumnIndex(MediaStore.Audio.Media.ARTIST));
+
+                        Song newSong = new Song(fullpath, song_name, duration, artist);
+                        inFiles.add(pos, newSong);
+
+                        pos++;
                     }
-                }
+                } while (cursor.moveToNext());
+
             }
+            cursor.close();
         }
         return inFiles;
     }
@@ -202,8 +259,5 @@ public class MainActivity extends AppCompatActivity {
             mediaPlayer.release();
             mediaPlayer = null;
         }
-    }
-    public void setmListView(ListView mListView) {
-        this.mListView = mListView;
     }
 }
